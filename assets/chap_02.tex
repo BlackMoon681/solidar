@@ -1,0 +1,1227 @@
+% ============================================================
+%  CHAPITRE 2 — Analyse et spécification des besoins
+% ============================================================
+
+\chapter{Analyse et spécification des besoins}
+
+% ------------------------------------------------------------
+\section*{Introduction}
+% ------------------------------------------------------------
+
+Avant d'écrire la première ligne de code, toute démarche sérieuse
+de développement passe par une phase d'analyse. Ce chapitre en
+constitue le compte-rendu : nous y formalisons ce que la plateforme
+doit faire, pour qui elle doit le faire, et dans quelles conditions
+elle doit fonctionner.
+
+Nous débutons par les besoins d'affaires, qui donnent les raisons
+profondes du projet et servent de boussole pour tous les arbitrages
+qui suivront. Nous en déduisons ensuite les exigences fonctionnelles
+et non fonctionnelles du système, en identifiant les parties prenantes
+et en cartographiant les interactions entre acteurs et modules.
+
+La planification du développement, organisée en cinq sprints Agile,
+fait l'objet d'une section dédiée. Nous présentons ensuite
+l'architecture générale retenue, puis l'environnement technique
+mobilisé. Enfin, une inspection approfondie des données sources
+débouche sur la conception du modèle physique de l'entrepôt,
+sur lequel reposent les tableaux de bord et les modules d'IA.
+
+% ============================================================
+\section{Définition des besoins d'affaires}
+% ============================================================
+
+Le diagnostic posé au chapitre précédent a mis en évidence les
+limites d'une organisation fondée sur des fichiers Excel dispersés.
+Pour y répondre, Wevioo a exprimé sept besoins d'affaires
+structurants, dont l'objectif commun est de doter l'organisation
+d'une plateforme unifiée couvrant l'intégralité du cycle de vie
+des projets environnementaux tout en générant une valeur analytique
+et décisionnelle réelle.
+
+\begin{itemize}
+    \item \textbf{Centralisation des données :} remplacer les fichiers
+    Excel dispersés par un référentiel unique consolidant toutes
+    les informations projet.
+
+    \item \textbf{Qualité et fiabilité des données :} mettre en place
+    des mécanismes de validation à la saisie et un pipeline de
+    nettoyage automatisé garantissant la cohérence des données.
+
+    \item \textbf{Suivi opérationnel en temps réel :} offrir aux
+    responsables une vision instantanée et actualisée de l'état
+    de leur portefeuille.
+
+    \item \textbf{Aide à la décision :} mettre à disposition des
+    décideurs des indicateurs agrégés et des tableaux de bord
+    interactifs pour l'analyse transversale des projets.
+
+    \item \textbf{Anticipation des risques :} exploiter des modèles
+    d'apprentissage automatique pour identifier précocement les
+    projets en danger et orienter les arbitrages correctifs.
+
+    \item \textbf{Assistance utilisateur :} intégrer un chatbot
+    intelligent permettant d'accéder rapidement à l'information
+    et d'être guidé dans les interactions avec la plateforme.
+
+    \item \textbf{Automatisation des traitements :} réduire la charge
+    manuelle en automatisant les flux de données et les transformations
+    ETL, limitant ainsi les erreurs humaines et les délais de
+    traitement.
+\end{itemize}
+
+Ces sept axes constituent le socle fonctionnel sur lequel repose
+l'ensemble des choix de conception présentés dans ce rapport.
+
+% ============================================================
+\section{Spécification des besoins}
+% ============================================================
+
+\subsection{Identification des parties prenantes}
+
+Deux profils d'utilisateurs ont été identifiés comme parties
+prenantes directes du système.
+
+\begin{itemize}
+    \item \textbf{Les administrateurs :} ils assurent la configuration
+    globale de la plateforme, la gestion des comptes, le paramétrage
+    des formulaires et la supervision des données projet. Leurs
+    droits d'accès sont complets.
+
+    \item \textbf{Les agents métiers :} utilisateurs opérationnels
+    au quotidien, responsables de l'enregistrement et du suivi des
+    projets. Leur périmètre d'accès est limité aux fonctionnalités
+    relevant de leur rôle.
+\end{itemize}
+
+% ------------------------------------------------------------
+\subsection{Besoins fonctionnels}
+% ------------------------------------------------------------
+
+Les besoins fonctionnels décrivent ce que le système doit être
+capable d'accomplir pour servir les objectifs métiers définis
+précédemment. Le tableau~\ref{tab:besoins_fonctionnels} en présente
+une synthèse par domaine.
+
+\begin{longtable}{|m{3.5cm}|m{9.5cm}|}
+\hline
+\textbf{Domaine} & \textbf{Fonctionnalité attendue} \\
+\hline
+\endhead
+
+Gestion des projets
+& Enregistrer, consulter, modifier et supprimer les projets
+environnementaux (bases PGD et PPP) via une interface centralisée. \\
+\hline
+
+Paramétrage
+& Configurer dynamiquement les champs et les formulaires de saisie
+selon les besoins spécifiques de chaque type de projet (domaines,
+thèmes, catégories, acteurs, financements, données géographiques). \\
+\hline
+
+Gestion des accès
+& Administrer les comptes utilisateurs, les rôles et les droits
+d'accès à la plateforme. \\
+\hline
+
+Pipeline ETL
+& Collecter, transformer et nettoyer les données issues de la
+base Joget (\texttt{jwdb}) afin de garantir leur qualité avant
+chargement dans l'entrepôt \texttt{cleaned\_dw}. \\
+\hline
+
+Visualisation BI
+& Générer des tableaux de bord interactifs avec Apache Superset
+et Chart.js permettant le suivi des indicateurs clés et l'analyse
+de l'avancement des projets. \\
+\hline
+
+Prédiction IA
+& Évaluer automatiquement le niveau de risque de chaque projet
+à l'aide d'un classificateur XGBClassifier et fournir une
+explication contextuelle générée par le modèle de langage
+\texttt{llama-3.3-70b-versatile}. \\
+\hline
+
+Assistance utilisateur
+& Fournir un chatbot RAG capable de répondre aux questions des
+utilisateurs sur les projets environnementaux à partir de la base
+documentaire interne. \\
+\hline
+
+Bibliothèque documentaire
+& Permettre l'ajout, la modification, la suppression et le
+téléchargement de documents liés aux projets. \\
+\hline
+
+\captionsetup{justification=centering}
+\caption{Synthèse des besoins fonctionnels}
+\label{tab:besoins_fonctionnels}
+\end{longtable}
+
+% ------------------------------------------------------------
+\subsubsection{Diagramme de cas d'utilisation global}
+% ------------------------------------------------------------
+
+La figure~\ref{fig:cas-utilisation-global} offre une vue d'ensemble
+des fonctionnalités de la plateforme et illustre la répartition
+des responsabilités entre les deux acteurs du système.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.80\textwidth]{img/use_case_general_otpp.png}
+    \caption{Diagramme de cas d'utilisation global de la plateforme}
+    \label{fig:cas-utilisation-global}
+\end{figure}
+
+Ce diagramme met en scène deux acteurs et huit modules fonctionnels.
+
+\paragraph{Acteurs.}
+\begin{itemize}
+    \item \textbf{L'Administrateur} dispose du périmètre d'action le
+    plus étendu : configuration du système, gestion des utilisateurs,
+    administration des contenus et accès à l'ensemble des
+    fonctionnalités.
+
+    \item \textbf{L'Agent métier} opère dans les limites des
+    permissions qui lui sont accordées : consultation, saisie et
+    visualisation des tableaux de bord.
+\end{itemize}
+
+\paragraph{Modules fonctionnels.}
+
+\begin{enumerate}
+    \item \textbf{Tableaux de bord :} les deux acteurs accèdent
+    à des dashboards développés avec Apache Superset et Chart.js,
+    offrant une visualisation actualisée des indicateurs de
+    performance des projets.
+
+    \item \textbf{Bibliothèque des documents :} l'administrateur
+    gère le cycle de vie des documents ; l'agent métier peut les
+    consulter et les télécharger.
+
+    \item \textbf{Gestion des utilisateurs :} fonctionnalité réservée
+    à l'administrateur, couvrant la création, la modification, la
+    suppression des comptes et l'assignation des rôles.
+
+    \item \textbf{Base de Gestion des Déchets (PGD) :} gestion
+    complète des projets de déchets avec opérations CRUD et
+    fonctionnalités de recherche.
+
+    \item \textbf{Base des Projets Publics (PPP) :} consultation et
+    gestion des projets publics, avec droits de modification réservés
+    à l'administrateur.
+
+    \item \textbf{Diagnostic de risque des projets :} module IA
+    central. L'administrateur saisit les indicateurs d'un projet
+    et obtient un score de risque accompagné d'une explication
+    exportable.
+
+    \item \textbf{Chatbot intelligent :} assistant conversationnel
+    accessible aux deux acteurs, fondé sur une architecture RAG
+    pour répondre aux questions portant sur les projets
+    environnementaux.
+
+    \item \textbf{Modules de paramétrage :} trois sous-modules
+    réservés à l'administrateur pour configurer les référentiels :
+    \begin{itemize}
+        \item Paramétrage PGD (domaines, thèmes, catégories, acteurs,
+              financements) ;
+        \item Paramétrage PPP (partenariats, types de projets) ;
+        \item Paramétrage géographique (gouvernorats, délégations,
+              secteurs).
+    \end{itemize}
+\end{enumerate}
+
+% ------------------------------------------------------------
+\subsection{Besoins non fonctionnels}
+% ------------------------------------------------------------
+
+Au-delà des fonctionnalités, la plateforme doit satisfaire
+six exigences de qualité transversales.
+
+\begin{itemize}
+    \item \textbf{Fiabilité :} des résultats cohérents et des données
+    exactes sont indispensables pour que les analyses produites et
+    les décisions qui en découlent restent crédibles.
+
+    \item \textbf{Sécurité :} la confidentialité des données sensibles
+    doit être assurée, et les accès contrôlés via un système de rôles
+    et permissions.
+
+    \item \textbf{Disponibilité :} les projets environnementaux
+    peuvent nécessiter un suivi à tout moment ; la plateforme doit
+    rester accessible en permanence.
+
+    \item \textbf{Performance :} traitements ETL, requêtes analytiques
+    et rendu des tableaux de bord doivent s'exécuter dans des délais
+    acceptables même sur des volumes de données croissants.
+
+    \item \textbf{Ergonomie :} l'interface doit rester utilisable par
+    des profils non techniques, pour favoriser l'adoption par
+    l'ensemble des agents métiers.
+
+    \item \textbf{Scalabilité :} l'architecture doit absorber l'ajout
+    de nouvelles fonctionnalités et la montée en charge des données
+    sans refonte majeure.
+\end{itemize}
+
+% ============================================================
+\section{Planification du projet}
+% ============================================================
+
+Le développement est découpé en cinq sprints Agile. Cette approche
+incrémentale livre des fonctionnalités testables à l'issue de
+chaque itération, autorise des ajustements de priorité en cours de
+route et maintient une communication continue avec les parties
+prenantes. Les trois tableaux ci-dessous présentent respectivement
+le product backlog, la répartition par release et le calendrier
+détaillé.
+
+\vspace{0.4cm}
+
+\begin{longtable}{|m{1.2cm}|m{3.8cm}|m{6.2cm}|m{2cm}|m{1.5cm}|}
+\hline
+\textbf{ID} & \textbf{Backlog Item} & \textbf{Description} &
+\textbf{Priorité} & \textbf{Sprint} \\
+\hline
+\endhead
+
+B1 & Gestion des projets environnementaux &
+Développement des interfaces d'enregistrement et de suivi
+des projets PGD et PPP. & Haute & 1 \\
+\hline
+
+B2 & Module de paramétrage &
+Mise en place du système de paramétrage dynamique des formulaires,
+champs et données référentielles. & Haute & 1 \\
+\hline
+
+B3 & Gestion des utilisateurs &
+Développement du module de gestion des comptes, rôles et
+permissions. & Haute & 2 \\
+\hline
+
+B4 & Pipeline ETL &
+Conception et développement du pipeline Python/Pandas pour le
+nettoyage, la transformation et le chargement dans
+\texttt{cleaned\_dw}. & Haute & 2 \\
+\hline
+
+B5 & Dashboards analytiques &
+Développement des tableaux de bord Superset et intégration des
+visualisations Chart.js dans Joget. & Moyenne & 3 \\
+\hline
+
+B6 & Prédiction des risques &
+Conception, entraînement et déploiement du modèle XGBClassifier
+avec génération d'explication via LLM. & Haute & 4 \\
+\hline
+
+B7 & Chatbot intelligent &
+Développement et intégration du chatbot RAG (FAISS +
+\texttt{all-MiniLM-L6-v2} + Groq) dans la plateforme. & Haute & 4 \\
+\hline
+
+B8 & Tests et déploiement &
+Validation fonctionnelle, sécurisation, optimisation et
+déploiement final de la plateforme. & Haute & 5 \\
+\hline
+
+\captionsetup{justification=centering,margin=2cm}
+\caption{Product Backlog avec affectation des sprints}
+\label{tab:product_backlog}
+\end{longtable}
+
+\vspace{0.4cm}
+
+\begin{longtable}{|m{3cm}|m{4cm}|m{7cm}|}
+\hline
+\textbf{Release} & \textbf{Module} & \textbf{Sprint} \\
+\hline
+\endhead
+
+Release 1 & Gestion des projets &
+Sprint 1 : Enregistrement, suivi et paramétrage des projets \\
+\hline
+
+Release 1 & Gestion des utilisateurs &
+Sprint 2 : Gestion des accès et pipeline ETL \\
+\hline
+
+Release 2 & Business Intelligence &
+Sprint 3 : Tableaux de bord et reporting analytique \\
+\hline
+
+Release 2 & Intelligence Artificielle &
+Sprint 4 : Prédiction des risques et chatbot RAG \\
+\hline
+
+Release 3 & Finalisation &
+Sprint 5 : Sécurité, tests, optimisation et déploiement \\
+\hline
+
+\captionsetup{justification=centering,margin=2cm}
+\caption{Répartition des releases et des sprints}
+\label{tab:release_sprints}
+\end{longtable}
+
+\vspace{0.4cm}
+
+\begin{longtable}{|m{1.8cm}|m{4.2cm}|m{8cm}|}
+\hline
+\textbf{Sprint} & \textbf{Période} & \textbf{Tâches principales} \\
+\hline
+\endhead
+
+Sprint 1 & 05/01/2026 -- 31/01/2026 &
+Analyse des besoins, modélisation initiale, développement du
+module de gestion des projets PGD/PPP et du paramétrage
+dynamique. \\
+\hline
+
+Sprint 2 & 01/02/2026 -- 28/02/2026 &
+Gestion des utilisateurs, rôles et permissions ; développement
+et test du pipeline ETL Python/Pandas. \\
+\hline
+
+Sprint 3 & 01/03/2026 -- 31/03/2026 &
+Conception du schéma dimensionnel, développement des tableaux
+de bord Superset et intégration Chart.js. \\
+\hline
+
+Sprint 4 & 01/04/2026 -- 30/04/2026 &
+Entraînement du modèle XGBClassifier, développement du chatbot
+RAG et intégration des deux modules dans FastAPI. \\
+\hline
+
+Sprint 5 & 01/05/2026 -- 01/06/2026 &
+Tests fonctionnels et de performance, sécurisation des accès,
+optimisation des requêtes et déploiement final. \\
+\hline
+
+\captionsetup{justification=centering,margin=2cm}
+\caption{Calendrier de planification des sprints}
+\label{tab:planning_sprints}
+\end{longtable}
+
+Cette organisation progressive garantit une livraison maîtrisée
+des fonctionnalités et ménage la réactivité nécessaire pour
+intégrer les retours des parties prenantes à l'issue de chaque
+sprint.
+
+% ============================================================
+\section{Architecture générale}
+% ============================================================
+
+La figure~\ref{fig:architecture_generale} présente l'architecture
+technique de la solution. Elle repose sur une organisation en cinq
+couches fonctionnelles distinctes, qui favorisent la clarté des
+responsabilités, la réutilisabilité des composants et la
+maintenabilité de l'ensemble.
+
+\begin{itemize}
+
+    \item \textbf{Couche de présentation :} assurée par Joget,
+    elle constitue le point d'entrée unique des utilisateurs.
+    Elle prend en charge la saisie des données, le paramétrage
+    dynamique des formulaires et le déclenchement des requêtes vers
+    le backend via des appels API REST.
+
+    \item \textbf{Couche de traitement :} orchestrée par FastAPI,
+    elle centralise la réception des requêtes, l'appel au pipeline
+    de traitement et l'invocation des modules d'IA. Les
+    transformations sont réalisées en Python avec Pandas, qui
+    applique les règles de nettoyage et de normalisation avant
+    chargement dans l'entrepôt.
+
+    \item \textbf{Couche de stockage :} les données se répartissent
+    dans deux bases MySQL complémentaires :
+    \begin{itemize}
+        \item \texttt{jwdb} : base applicative générée
+        automatiquement par Joget, hébergeant les données brutes
+        issues des formulaires ainsi que l'entrepôt transformé,
+        organisé selon le modèle dimensionnel de Kimball.
+    \end{itemize}
+
+    \item \textbf{Couche de visualisation :} l'entrepôt
+    \texttt{cleaned\_dw} alimente Apache Superset pour les tableaux
+    de bord décisionnels, complété par Chart.js pour les
+    visualisations interactives intégrées dans Joget.
+
+    \item \textbf{Modules d'intelligence artificielle :} deux
+    modules enrichissent la chaîne décisionnelle :
+    \begin{itemize}
+        \item \textbf{Prédiction des risques :} un classificateur
+        XGBClassifier évalue en temps réel le niveau de risque
+        (faible, moyen, élevé, critique) et génère une explication
+        contextuelle via \texttt{llama-3.3-70b-versatile} ;
+        \item \textbf{Chatbot RAG :} combinant un index FAISS,
+        le modèle \texttt{all-MiniLM-L6-v2} et l'API Groq, il
+        fournit des réponses contextualisées aux questions des
+        utilisateurs sur les projets environnementaux.
+    \end{itemize}
+
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{img/archi.png}
+    \caption{Architecture générale de la plateforme}
+    \label{fig:architecture_generale}
+\end{figure}
+
+% ============================================================
+\section{Environnement technique}
+% ============================================================
+
+Le tableau~\ref{tab:env_technique} recense les outils et technologies
+mobilisés à chaque étape du projet, depuis la conception jusqu'au
+déploiement. Trois critères ont guidé ces choix : la cohérence avec
+l'architecture retenue, l'adéquation aux besoins fonctionnels et
+la disponibilité en open source.
+
+\begin{longtable}{|m{4cm}|m{4.5cm}|m{6cm}|}
+\hline
+\textbf{Phase} & \textbf{Outil} & \textbf{Rôle dans le projet} \\
+\hline
+\endhead
+
+Développement applicatif (Low-Code)
+& Joget DX
+& Développement de l'interface utilisateur, des formulaires de saisie,
+  du paramétrage dynamique et de la gestion des accès. \\
+\hline
+
+Développement backend
+& FastAPI (Python)
+& Exposition des endpoints REST, orchestration du pipeline de
+  traitement, routage vers les modules IA et gestion des appels
+  inter-services. \\
+\hline
+
+Traitement et pipeline ETL
+& Python · Pandas
+& Extraction des données brutes depuis \texttt{jwdb}, nettoyage,
+  normalisation, enrichissement et chargement dans
+  \texttt{cleaned\_dw}. \\
+\hline
+
+Stockage des données
+& MySQL
+& Hébergement de la base applicative Joget (\texttt{jwdb}) et de
+  l'entrepôt décisionnel (\texttt{cleaned\_dw}). \\
+\hline
+
+Business Intelligence
+& Apache Superset
+& Création et publication des tableaux de bord interactifs connectés
+  directement à \texttt{cleaned\_dw}. \\
+\hline
+
+Visualisation web
+& Chart.js
+& Intégration de graphiques dynamiques dans les interfaces Joget
+  pour le suivi en temps réel des indicateurs projet. \\
+\hline
+
+Prédiction des risques (IA)
+& XGBClassifier · scikit-learn · joblib
+& Entraînement, évaluation et persistance du modèle de classification
+  du risque projet sur 34 indicateurs. \\
+\hline
+
+Génération de langage naturel
+& llama-3.3-70b-versatile (via API Groq)
+& Production des explications contextuelles des prédictions de risque
+  et génération des réponses du chatbot. \\
+\hline
+
+Chatbot RAG
+& FAISS · SentenceTransformers (\texttt{all-MiniLM-L6-v2})
+& Construction de l'index vectoriel et recherche sémantique dans la
+  base documentaire pour alimenter le chatbot en contexte pertinent. \\
+\hline
+
+Gestion des dépendances
+& pip · requirements.txt
+& Gestion et reproductibilité de l'environnement Python du backend. \\
+\hline
+
+Versionnement du code
+& Git · GitHub
+& Suivi des versions du code source, collaboration et sauvegarde du
+  dépôt du projet. \\
+\hline
+
+\captionsetup{justification=centering,margin=2cm}
+\caption{Environnement technique du projet}
+\label{tab:env_technique}
+\end{longtable}
+
+L'ensemble forme un écosystème cohérent et majoritairement open
+source, qui évite toute dépendance à des licences propriétaires
+coûteuses tout en offrant les performances attendues d'un système
+décisionnel orienté données et intelligence artificielle.
+
+% ============================================================
+\section{Inspection des données source}
+% ============================================================
+
+Les données exploitées dans ce projet proviennent de deux niveaux
+distincts de la chaîne de traitement.
+
+Le premier niveau regroupe les \textbf{tables brutes} générées
+automatiquement par Joget lors de l'import historique des données
+depuis les fichiers Excel fournis par Wevioo :
+\texttt{app\_fd\_base\_pgd}, \texttt{app\_fd\_base\_pgd\_etude}
+et \texttt{app\_fd\_base\_ppp}. Elles constituent la source
+primaire du pipeline ETL.
+
+Le second niveau correspond aux \textbf{tables nettoyées} —
+\texttt{app\_fd\_pgd\_clean}, \texttt{app\_fd\_pgd\_etude\_clean}
+et \texttt{app\_fd\_ppp\_clean} — produites par le pipeline ETL
+Python développé dans le cadre de ce projet. C'est sur elles que
+s'appuient l'entrepôt de données et les modules d'IA.
+
+L'inspection porte sur les tables brutes sources. Pour chaque
+colonne, deux dimensions sont évaluées : la \textbf{qualité}
+(cohérence, complétude) et l'\textbf{utilité analytique}
+(pertinence pour l'entrepôt et les tableaux de bord).
+Le symbole \checkmark\ indique une valeur positive, \texttimes\
+une anomalie ou une exclusion justifiée.
+
+% ============================================================
+\subsection{Inspection de la table \texttt{app\_fd\_base\_pgd}}
+% ============================================================
+
+Cette table regroupe les projets opérationnels de gestion des
+déchets importés depuis les fichiers historiques Excel. Elle
+compte \textbf{16 colonnes}.
+
+\begin{longtable}{
+  | >{\RaggedRight}p{3cm}
+  | >{\RaggedRight}p{3.2cm}
+  | >{\centering\arraybackslash}p{1.2cm}
+  | >{\centering\arraybackslash}p{0.9cm}
+  | >{\centering\arraybackslash}p{0.8cm}
+  | >{\RaggedRight}p{3.8cm} |
+}
+\hline
+\textbf{Nom} & \textbf{Description} & \textbf{Type} &
+\textbf{Qual.} & \textbf{Util.} & \textbf{Commentaire} \\
+\hline
+\endhead
+
+id & Identifiant unique (UUID Joget) & String &
+\checkmark & \checkmark & Clé primaire \\
+\hline
+dateCreated & Date de création & String &
+\checkmark & \checkmark & Conversion datetime requise \\
+\hline
+dateModified & Date de modification & String &
+\checkmark & \checkmark & Conversion datetime requise \\
+\hline
+createdBy & Login créateur & String &
+\checkmark & \texttimes & Non analytique — exclu du DW \\
+\hline
+createdByName & Nom créateur & String &
+\checkmark & \texttimes & Non analytique — exclu du DW \\
+\hline
+modifiedBy & Login modificateur & String &
+\checkmark & \texttimes & Non analytique — exclu du DW \\
+\hline
+modifiedByName & Nom modificateur & String &
+\checkmark & \texttimes & Non analytique — exclu du DW \\
+\hline
+c\_projet & Intitulé du projet & String &
+\checkmark & \checkmark & \\
+\hline
+c\_promoteur & Organisme promoteur & String &
+\checkmark & \checkmark & \\
+\hline
+c\_activite & Activités réalisées & String &
+\checkmark & \checkmark & Texte long — usage descriptif \\
+\hline
+c\_objectifs & Objectifs du projet & String &
+\checkmark & \checkmark & Texte long — usage descriptif \\
+\hline
+c\_context & Contexte du projet & String &
+\checkmark & \checkmark & Texte long — usage descriptif \\
+\hline
+c\_bailleur & Bailleur de fonds & String &
+\checkmark & \checkmark & \\
+\hline
+c\_annee & Année du projet & Float64 &
+\checkmark & \checkmark & Convertir en Int64 dans le DW \\
+\hline
+c\_region & Région géographique & String &
+\checkmark & \checkmark & \\
+\hline
+c\_budget & Budget alloué & String &
+\texttimes & \checkmark & Format texte libre (ex. : ``9 millions de DT'') — extraction numérique et conversion TND effectuées lors du nettoyage \\
+\hline
+
+\caption{Inspection de la table brute \texttt{app\_fd\_base\_pgd}}
+\label{tab:inspection_pgd}
+\end{longtable}
+
+% ============================================================
+\subsection{Inspection de la table \texttt{app\_fd\_base\_pgd\_etude}}
+% ============================================================
+
+Cette table regroupe les études et rapports associés aux projets
+PGD. Elle contient \textbf{20 colonnes} et inclut notamment
+des liens PDF et des références vers les tables de paramétrage.
+
+\begin{longtable}{
+  | >{\RaggedRight}p{3cm}
+  | >{\RaggedRight}p{3.2cm}
+  | >{\centering\arraybackslash}p{1.2cm}
+  | >{\centering\arraybackslash}p{0.9cm}
+  | >{\centering\arraybackslash}p{0.8cm}
+  | >{\RaggedRight}p{3.8cm} |
+}
+\hline
+\textbf{Nom} & \textbf{Description} & \textbf{Type} &
+\textbf{Qual.} & \textbf{Util.} & \textbf{Commentaire} \\
+\hline
+\endhead
+
+id & Identifiant unique (UUID Joget) & String &
+\checkmark & \checkmark & Clé primaire \\
+\hline
+dateCreated & Date de création & String &
+\checkmark & \checkmark & Conversion datetime requise \\
+\hline
+dateModified & Date de modification & String &
+\checkmark & \checkmark & Conversion datetime requise \\
+\hline
+createdBy & Login créateur & String &
+\checkmark & \texttimes & Non analytique — exclu du DW \\
+\hline
+createdByName & Nom créateur & String &
+\checkmark & \texttimes & Non analytique — exclu du DW \\
+\hline
+modifiedBy & Login modificateur & String &
+\checkmark & \texttimes & Non analytique — exclu du DW \\
+\hline
+modifiedByName & Nom modificateur & String &
+\checkmark & \texttimes & Non analytique — exclu du DW \\
+\hline
+c\_intitule & Intitulé de l'étude & String &
+\checkmark & \checkmark & \\
+\hline
+c\_expert & Expert responsable & String &
+\checkmark & \checkmark & \\
+\hline
+c\_annee & Année de l'étude & Int64 &
+\checkmark & \checkmark & \\
+\hline
+c\_cout & Coût de l'étude (DT) & Int64 &
+\checkmark & \checkmark & Indicateur financier clé \\
+\hline
+c\_domaine & Domaine de l'étude & String &
+\checkmark & \checkmark & FK → param\_domaine\_pgd \\
+\hline
+c\_theme & Thème de l'étude & String &
+\checkmark & \checkmark & FK → param\_theme\_pgd \\
+\hline
+c\_categorie & Catégorie de l'étude & String &
+\checkmark & \checkmark & FK → param\_categorie\_pgd \\
+\hline
+c\_bailleur & Bailleur de fonds & String &
+\checkmark & \checkmark & FK → param\_bailleur\_pgd \\
+\hline
+c\_beneficiaires & Bénéficiaires & String &
+\checkmark & \checkmark & Texte libre \\
+\hline
+c\_acteur\_institutionnel & Acteur institutionnel & String &
+\checkmark & \checkmark & \\
+\hline
+c\_partenaire\_implementation & Partenaire d'implémentation & String &
+\checkmark & \checkmark & \\
+\hline
+c\_cadre & Cadre programmatique & String &
+\checkmark & \checkmark & \\
+\hline
+c\_lien\_pdf & Lien URL vers le PDF & String &
+\checkmark & \checkmark & Utile pour la bibliothèque \\
+\hline
+
+\caption{Inspection de la table brute \texttt{app\_fd\_base\_pgd\_etude}}
+\label{tab:inspection_pgd_etude}
+\end{longtable}
+
+% ============================================================
+\subsection{Inspection de la table \texttt{app\_fd\_base\_ppp}}
+% ============================================================
+
+Avec \textbf{73 colonnes}, c'est la table la plus volumineuse du
+corpus. Deux particularités structurelles ressortent de son
+inspection : les dates sont encodées au format sériel Excel
+(entier = nombre de jours depuis le 01/01/1900), ce qui impose
+une conversion systématique dans le pipeline ETL ; plusieurs
+colonnes contiennent des UUID pointant vers les tables de
+paramétrage Joget (clés étrangères). Par souci de lisibilité,
+les colonnes FK n'indiquent que le suffixe de la table cible.
+
+\begin{longtable}{
+  | >{\RaggedRight}p{3cm}
+  | >{\RaggedRight}p{3.2cm}
+  | >{\centering\arraybackslash}p{1.2cm}
+  | >{\centering\arraybackslash}p{0.9cm}
+  | >{\centering\arraybackslash}p{0.8cm}
+  | >{\RaggedRight}p{3.8cm} |
+}
+\hline
+\textbf{Nom} & \textbf{Description} & \textbf{Type} &
+\textbf{Qual.} & \textbf{Util.} & \textbf{Commentaire} \\
+\hline
+\endhead
+
+id & Identifiant unique & String &
+\checkmark & \checkmark & Clé primaire \\
+\hline
+dateCreated & Date de création & String &
+\checkmark & \checkmark & Conversion datetime requise \\
+\hline
+dateModified & Date de modification & String &
+\checkmark & \checkmark & Conversion datetime requise \\
+\hline
+createdBy & Login créateur & String &
+\checkmark & \texttimes & Non analytique — exclu du DW \\
+\hline
+createdByName & Nom créateur & String &
+\checkmark & \texttimes & Non analytique — exclu du DW \\
+\hline
+modifiedBy & Login modificateur & String &
+\checkmark & \texttimes & Non analytique — exclu du DW \\
+\hline
+modifiedByName & Nom modificateur & String &
+\checkmark & \texttimes & Non analytique — exclu du DW \\
+\hline
+c\_nom\_projet & Intitulé du projet PPP & String &
+\checkmark & \checkmark & \\
+\hline
+c\_numero & Numéro du projet & Int64 &
+\checkmark & \checkmark & \\
+\hline
+c\_cadre & Cadre budgétaire (ex. LF2020) & String &
+\checkmark & \checkmark & \\
+\hline
+c\_odd & ODD associé au projet & String &
+\checkmark & \checkmark & Texte libre \\
+\hline
+c\_gouvernorat & Gouvernorat & Int64 &
+\checkmark & \checkmark & FK → app\_fd\_gouvernorat \\
+\hline
+c\_delegation & Délégation & Int64 &
+\checkmark & \checkmark & FK → app\_fd\_delegation \\
+\hline
+c\_commune & Commune & Int64 &
+\checkmark & \checkmark & Clé numérique \\
+\hline
+c\_localite & Localité précise & String &
+\texttimes & \checkmark & 50\,\% de valeurs manquantes \\
+\hline
+c\_axe & Axe stratégique & UUID &
+\checkmark & \checkmark & FK → param\_axe\_ppp \\
+\hline
+c\_sous\_axe & Sous-axe stratégique & UUID &
+\checkmark & \checkmark & FK → param\_sous\_axe\_ppp \\
+\hline
+c\_classification & Classification du projet & UUID &
+\checkmark & \checkmark & FK → param\_classification \\
+\hline
+c\_sous\_classification & Sous-classification & UUID &
+\checkmark & \checkmark & FK → param\_sous\_class\_ppp \\
+\hline
+c\_initiateur & Initiateur du projet & UUID &
+\checkmark & \checkmark & FK → param\_initiateur\_ppp \\
+\hline
+c\_owner & Structure porteuse & String &
+\checkmark & \checkmark & Valeur textuelle directe \\
+\hline
+c\_acteur\_dimplementation & Acteur d'implémentation & UUID &
+\checkmark & \checkmark & FK → param\_act\_imp\_ppp \\
+\hline
+c\_delimination & Délimitation géographique & UUID &
+\checkmark & \checkmark & FK → param\_delim\_geo\_ppp \\
+\hline
+c\_mode\_financement & Mode de financement & UUID &
+\checkmark & \checkmark & FK → param\_mode\_finance \\
+\hline
+c\_mode\_passation\_marche & Mode de passation marché & UUID &
+\checkmark & \checkmark & FK → param\_pass\_march \\
+\hline
+c\_tutelle\_sectorielle & Tutelle sectorielle & UUID &
+\checkmark & \checkmark & FK → param\_tut\_sec\_ppp \\
+\hline
+c\_zonage & Zonage du projet & UUID &
+\checkmark & \checkmark & FK → param\_zonage\_ppp \\
+\hline
+c\_donateur & Donateur & UUID &
+\texttimes & \checkmark & 80\,\% de valeurs manquantes ; FK → param\_donateur \\
+\hline
+c\_bailleur\_fonds & Bailleur de fonds & String &
+\texttimes & \checkmark & 70\,\% de valeurs manquantes \\
+\hline
+c\_situation\_actuelle\_projet & Situation actuelle & String &
+\checkmark & \checkmark & \\
+\hline
+c\_phase\_en\_cours & Phase opérationnelle & String &
+\checkmark & \checkmark & \\
+\hline
+c\_exercice\_budgetaire & Exercice budgétaire & Int64 &
+\checkmark & \checkmark & \\
+\hline
+c\_budget\_global\_planifie & Budget planifié (DT) & Int64 &
+\checkmark & \checkmark & Indicateur financier clé \\
+\hline
+c\_budget\_global\_consomme & Budget consommé (DT) & Float64 &
+\checkmark & \checkmark & Indicateur financier clé \\
+\hline
+c\_solde\_budget\_restant & Solde restant (DT) & Float64 &
+\checkmark & \checkmark & Planifié − Consommé \\
+\hline
+c\_budget\_realisation\_planifie & Budget réalisation planifié & Int64 &
+\checkmark & \checkmark & \\
+\hline
+c\_budget\_realisation\_consomme & Budget réalisation consommé & Float64 &
+\checkmark & \checkmark & \\
+\hline
+c\_budget\_etude\_planifie & Budget études planifié & Int64 &
+\checkmark & \checkmark & \\
+\hline
+c\_budget\_etudes\_consomme & Budget études consommé & Float64 &
+\checkmark & \checkmark & \\
+\hline
+c\_budget\_controle\_planifie & Budget contrôle planifié & Int64 &
+\checkmark & \checkmark & \\
+\hline
+c\_budget\_controle\_consomme & Budget contrôle consommé & Float64 &
+\checkmark & \checkmark & \\
+\hline
+c\_cout\_foncier & Coût foncier (DT) & Int64 &
+\checkmark & \checkmark & \\
+\hline
+c\_part\_budget\_etat & Part budget État (DT) & Int64 &
+\checkmark & \checkmark & \\
+\hline
+c\_part\_credits & Part crédits (DT) & Int64 &
+\checkmark & \checkmark & \\
+\hline
+c\_part\_dons & Part dons (DT) & Int64 &
+\checkmark & \checkmark & \\
+\hline
+c\_taux\_avancement\_institutionnel & Avancement institutionnel & Float64 &
+\checkmark & \checkmark & Valeur décimale 0–1 \\
+\hline
+c\_taux\_avancement\_passation & Avancement passation marchés & Float64 &
+\checkmark & \checkmark & Valeur décimale 0–1 \\
+\hline
+c\_nombre\_marches & Nombre de marchés & Int64 &
+\checkmark & \checkmark & \\
+\hline
+c\_retard\_avance\_en\_jours & Retard / avance (jours) & Int64 &
+\checkmark & \checkmark & Négatif = avance, positif = retard \\
+\hline
+c\_date\_debut\_prevue & Date début prévue & Int64 &
+\texttimes & \checkmark & Format sériel Excel — conversion obligatoire \\
+\hline
+c\_date\_fin\_prevue & Date fin prévue & Int64 &
+\texttimes & \checkmark & Format sériel Excel \\
+\hline
+c\_date\_debut\_reelle & Date début réelle & Int64 &
+\texttimes & \checkmark & Format sériel Excel \\
+\hline
+c\_date\_fin\_reelle & Date fin réelle & Int64 &
+\texttimes & \checkmark & Format sériel Excel \\
+\hline
+c\_date\_approbation\_cnapp & Date approbation CNAPP & Int64 &
+\texttimes & \checkmark & Format sériel Excel \\
+\hline
+c\_date\_etude\_faisabilite & Date étude faisabilité & Int64 &
+\texttimes & \checkmark & Format sériel Excel \\
+\hline
+c\_nombre\_beneficiaires & Nombre de bénéficiaires & Int64 &
+\checkmark & \checkmark & \\
+\hline
+c\_emplois\_directs\_crees & Emplois directs créés & Int64 &
+\checkmark & \checkmark & \\
+\hline
+c\_part\_femmes\_execution & Part femmes — exécution & Float64 &
+\checkmark & \checkmark & Valeur 0–1 \\
+\hline
+c\_part\_femmes\_emplois & Part femmes — emplois créés & Float64 &
+\checkmark & \checkmark & Valeur 0–1 \\
+\hline
+c\_part\_femmes\_beneficiaires & Part femmes — bénéficiaires & Float64 &
+\checkmark & \checkmark & Valeur 0–1 \\
+\hline
+c\_incidents\_corporels & Incidents corporels & Int64 &
+\checkmark & \checkmark & Indicateur sécurité \\
+\hline
+c\_penalites\_amendes & Pénalités et amendes (DT) & Int64 &
+\checkmark & \checkmark & \\
+\hline
+c\_etude\_impact\_environnement & Étude impact environnemental & String &
+\checkmark & \checkmark & Réalisée / Non réalisée \\
+\hline
+c\_normes\_techniques & Normes techniques applicables & String &
+\checkmark & \checkmark & Texte libre \\
+\hline
+c\_contractant\_prive & Nom du contractant privé & String &
+\checkmark & \checkmark & \\
+\hline
+c\_rne\_contractant\_prive & RNE contractant privé & String &
+\checkmark & \texttimes & Administratif — non analytique \\
+\hline
+c\_taille\_contractant\_prive & Taille contractant (PME/Grande) & String &
+\checkmark & \checkmark & \\
+\hline
+c\_responsable\_institutionnel & Responsable institutionnel & String &
+\checkmark & \checkmark & \\
+\hline
+c\_responsable\_suivi & Responsable de suivi & String &
+\checkmark & \checkmark & \\
+\hline
+c\_projet\_parent & Projet parent (si existant) & String &
+\checkmark & \checkmark & 70\,\% de valeurs manquantes \\
+\hline
+c\_projet\_child & Projet enfant & Float64 &
+\texttimes & \texttimes & 100\,\% de valeurs manquantes — colonne supprimée \\
+\hline
+c\_commune\_s8 & Commune section 8 & Float64 &
+\texttimes & \texttimes & 100\,\% de valeurs manquantes — colonne supprimée \\
+\hline
+
+\captionsetup{justification=centering,margin=2cm}
+\caption{Inspection de la table brute \texttt{app\_fd\_base\_ppp}}
+\label{tab:inspection_ppp}
+\end{longtable}
+
+% ============================================================
+\subsection{Identification des tables de faits et de dimensions}
+% ============================================================
+
+L'entrepôt \texttt{cleaned\_dw} s'organise autour d'un schéma
+dimensionnel composé de trois tables de faits et de vingt et une
+tables de dimensions.
+
+\subsubsection{Tables de faits}
+
+Les trois tables de faits sont le produit direct du pipeline ETL.
+
+\begin{longtable}{|p{4.5cm}|p{4cm}|p{6cm}|}
+\hline
+\textbf{Table brute (source)} & \textbf{Table nettoyée (DW)} &
+\textbf{Description} \\
+\hline
+\endhead
+
+\texttt{app\_fd\_base\_pgd} &
+\texttt{app\_fd\_pgd\_clean} &
+Projets opérationnels de gestion des déchets — budget normalisé en
+TND, année convertie en entier. \\
+\hline
+
+\texttt{app\_fd\_base\_pgd\_etude} &
+\texttt{app\_fd\_pgd\_etude\_clean} &
+Études et rapports PGD — coût normalisé, colonnes de traçabilité
+exclues. \\
+\hline
+
+\texttt{app\_fd\_base\_ppp} &
+\texttt{app\_fd\_ppp\_clean} &
+Projets PPP — dates converties, indicateurs de risque calculés
+(\texttt{risque\_retard}, \texttt{risque\_depassement}),
+colonnes vides supprimées. \\
+\hline
+
+\captionsetup{justification=centering,margin=2cm}
+\caption{Correspondance tables brutes / tables nettoyées}
+\label{tab:tables_faits}
+\end{longtable}
+
+\subsubsection{Tables de dimensions}
+
+Les tables de dimensions proviennent des modules de paramétrage
+Joget. Elles portent un identifiant unique — stocké comme clé
+étrangère dans les tables de faits — et un libellé décrivant
+l'entité référencée.
+
+\begin{longtable}{|p{5.5cm}|p{9cm}|}
+\hline
+\textbf{Table de dimension} & \textbf{Description} \\
+\hline
+\endhead
+
+\texttt{app\_fd\_param\_domaine\_pgd} &
+Domaines des études PGD (ex. : Environnement, Économie circulaire).
+Référencé par \texttt{c\_domaine}. \\
+\hline
+\texttt{app\_fd\_param\_theme\_pgd} &
+Thèmes des études PGD. Référencé par \texttt{c\_theme}. \\
+\hline
+\texttt{app\_fd\_param\_categorie\_pgd} &
+Catégories des études PGD. Référencé par \texttt{c\_categorie}. \\
+\hline
+\texttt{app\_fd\_param\_bailleur\_pgd} &
+Bailleurs de fonds PGD. Référencé par \texttt{c\_bailleur}. \\
+\hline
+\texttt{app\_fd\_param\_axe\_ppp} &
+Axes stratégiques PPP. Référencé par \texttt{c\_axe}. \\
+\hline
+\texttt{app\_fd\_param\_sous\_axe\_ppp} &
+Sous-axes stratégiques. Référencé par \texttt{c\_sous\_axe}. \\
+\hline
+\texttt{app\_fd\_param\_classification} &
+Classifications des projets PPP. Référencé par \texttt{c\_classification}. \\
+\hline
+\texttt{app\_fd\_param\_sous\_class\_ppp} &
+Sous-classifications PPP. Référencé par \texttt{c\_sous\_classification}. \\
+\hline
+\texttt{app\_fd\_param\_act\_imp\_ppp} &
+Acteurs d'implémentation. Référencé par \texttt{c\_acteur\_dimplementation}. \\
+\hline
+\texttt{app\_fd\_param\_delim\_geo\_ppp} &
+Délimitations géographiques. Référencé par \texttt{c\_delimination}. \\
+\hline
+\texttt{app\_fd\_param\_initiateur\_ppp} &
+Initiateurs des projets. Référencé par \texttt{c\_initiateur}. \\
+\hline
+\texttt{app\_fd\_param\_owner\_ppp} &
+Structures porteuses. Référencé par \texttt{c\_owner}. \\
+\hline
+\texttt{app\_fd\_param\_mode\_finance} &
+Modes de financement. Référencé par \texttt{c\_mode\_financement}. \\
+\hline
+\texttt{app\_fd\_param\_pass\_march} &
+Modes de passation de marché. Référencé par \texttt{c\_mode\_passation\_marche}. \\
+\hline
+\texttt{app\_fd\_param\_tut\_sec\_ppp} &
+Tutelles sectorielles. Référencé par \texttt{c\_tutelle\_sectorielle}. \\
+\hline
+\texttt{app\_fd\_param\_zonage\_ppp} &
+Zones géographiques. Référencé par \texttt{c\_zonage}. \\
+\hline
+\texttt{app\_fd\_param\_situation\_pj} &
+Situations des projets (En cours, Bloqué, Clôturé). \\
+\hline
+\texttt{app\_fd\_param\_donateur} &
+Donateurs associés aux projets PPP (80\,\% de valeurs nulles). \\
+\hline
+\texttt{app\_fd\_gouvernorat} &
+Référentiel des gouvernorats tunisiens. Clé entière. \\
+\hline
+\texttt{app\_fd\_delegation} &
+Référentiel des délégations. Clé entière. \\
+\hline
+\texttt{app\_fd\_secteur} &
+Référentiel des secteurs pour la granularité infranationale. \\
+\hline
+
+\captionsetup{justification=centering,margin=2cm}
+\caption{Tables de dimensions de l'entrepôt de données}
+\label{tab:tables_dimensions}
+\end{longtable}
+
+% ============================================================
+\section{Conception du modèle physique de données}
+% ============================================================
+
+L'inspection des tables sources et l'identification des entités
+dimensionnelles ont conduit à la conception du modèle physique de
+l'entrepôt \texttt{cleaned\_dw}. Ce modèle est le socle sur lequel
+reposent les traitements analytiques, les tableaux de bord et les
+modules d'IA.
+
+\subsection{Type de schéma retenu}
+
+L'entrepôt ne relève pas d'un simple schéma en étoile. La
+coexistence de trois tables de faits distinctes partageant des
+dimensions communes — notamment \texttt{app\_fd\_param\_bailleur\_pgd},
+\texttt{app\_fd\_gouvernorat} et \texttt{app\_fd\_delegation} —
+en fait un \textbf{schéma en constellation} (\textit{galaxy schema}).
+Ce choix évite la redondance des référentiels et garantit la
+cohérence des données entre les trois domaines analytiques couverts.
+
+\subsection{Organisation des tables}
+
+Le modèle physique s'articule autour de trois pôles fonctionnels.
+
+\begin{itemize}
+    \item \textbf{Pôle PGD opérationnel :} la table
+    \texttt{app\_fd\_pgd\_clean} centralise les projets de gestion
+    des déchets avec budget normalisé en TND et année de réalisation.
+    Elle partage la dimension bailleur avec le pôle suivant.
+
+    \item \textbf{Pôle PGD études :} \texttt{app\_fd\_pgd\_etude\_clean}
+    héberge les études et rapports PGD. Elle partage la dimension
+    bailleur et dispose de trois dimensions propres : domaine, thème
+    et catégorie.
+
+    \item \textbf{Pôle PPP :} \texttt{app\_fd\_ppp\_clean} est la
+    table la plus dense — dix-neuf clés étrangères couvrant axes,
+    classifications, financements, acteurs, indicateurs de performance
+    et localisation. Elle intègre deux colonnes calculées par le
+    pipeline ETL — \texttt{risque\_retard} et
+    \texttt{risque\_depassement} — directement utilisées comme
+    features d'entrée du modèle XGBClassifier.
+\end{itemize}
+
+\subsection{Hiérarchie géographique}
+
+La modélisation géographique mérite une attention particulière.
+\texttt{app\_fd\_delegation} référence \texttt{app\_fd\_gouvernorat}
+par clé étrangère entière, créant une hiérarchie administrative en
+trois niveaux : gouvernorat → délégation → secteur. Cette structure
+permet à Superset d'agréger les données à différentes granularités
+territoriales.
+
+\subsection{Représentation du modèle physique}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\textwidth]{img/constellation_schema_dw.png}
+    \caption{Modèle physique de l'entrepôt de données
+             — schéma en constellation}
+    \label{fig:modele_physique}
+\end{figure}
+
+Conçu selon les principes de la modélisation dimensionnelle de
+Kimball, ce schéma offre des performances de requêtage optimales
+pour Superset tout en restant suffisamment lisible pour les
+développeurs chargés de la maintenance du pipeline.
+
+\newpage
+
+% ============================================================
+\section*{Conclusion}
+% ============================================================
+
+Ce chapitre a conduit une démarche d'analyse structurée, des besoins
+métiers jusqu'au modèle physique de données.
+
+Les sept axes de besoins d'affaires ont fourni le cadre de référence
+pour tous les arbitrages de conception. Deux profils d'utilisateurs
+et huit domaines fonctionnels ont été identifiés et formalisés. Les
+exigences non fonctionnelles — fiabilité, sécurité, performance,
+scalabilité — complètent ce tableau en définissant les contraintes
+de qualité que la plateforme doit respecter en toutes circonstances.
+
+La planification en cinq sprints Agile garantit une progression
+maîtrisée et réversible des développements. L'architecture en cinq
+couches et l'environnement technique majoritairement open source
+traduisent concrètement ces besoins en choix de conception.
+Enfin, l'inspection des données sources a mis en évidence les
+principales anomalies à corriger et a conduit à la définition du
+schéma en constellation de l'entrepôt, composé de trois tables de
+faits et de vingt et une dimensions.
+
+Ces fondations posées, le chapitre suivant entre dans la réalisation
+technique : pipeline ETL, développement des interfaces et intégration
+des modules d'intelligence artificielle.
