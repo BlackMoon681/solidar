@@ -1,55 +1,63 @@
+"""
+etl/load.py
+-----------
+Targets the cleaned_dw warehouse. Creates the database if needed and loads
+dimension + fact tables with UTF-8mb4 safety.
+"""
 import pandas as pd
 from sqlalchemy import create_engine, text
 from core.config import Config
 
-engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
+# Source (jwdb) and warehouse (cleaned_dw) engines
+src_engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
+dw_engine  = create_engine(Config.SQLALCHEMY_DW_URI)
 
 
-def clean_text_for_mysql(df: pd.DataFrame) -> pd.DataFrame:
-    """Aggressive cleaning for MySQL encoding issues"""
+def ensure_warehouse():
+    """Create the cleaned_dw database if it does not exist."""
+    server = create_engine(Config.SQLALCHEMY_SERVER_URI)
+    with server.connect() as conn:
+        conn.execute(text(
+            f"CREATE DATABASE IF NOT EXISTS {Config.DB_NAME_DW} "
+            f"CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+        ))
+        conn.commit()
+    server.dispose()
+    print(f"Warehouse ready: {Config.DB_NAME_DW}")
+
+
+def _clean_text_cols(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-
-    text_cols = ['c_nom_projet', 'c_phase_en_cours', 'c_odd', 'c_normes_techniques_applicables',
-                 'c_etude_impact_environnement', 'c_localite', 'c_projet_parent', 'c_owner']
-
-    for col in text_cols:
-        if col in df.columns:
-            df[col] = df[col].astype(str)
-            # Replace problematic characters
-            df[col] = df[col].str.replace(r'[\u2018\u2019\u201c\u201d\u2013\u2014]', "'", regex=True)  # quotes & dashes
-            df[col] = df[col].str.replace('≤', '<=')
-            df[col] = df[col].str.replace('≥', '>=')
-            df[col] = df[col].str.replace('’', "'")
-            df[col] = df[col].str.replace('–', '-')
-            df[col] = df[col].str.replace('—', '-')
-            # Remove any remaining non-ASCII if needed
-            # df[col] = df[col].str.encode('ascii', errors='replace').str.decode('ascii')
-
+    for col in df.select_dtypes(include="object").columns:
+        df[col] = (df[col].astype(str)
+                   .str.replace(r"[‘’]", "'", regex=True)
+                   .str.replace(r"[“”]", '"', regex=True)
+                   .str.replace(r"[–—]", "-", regex=True))
+        df[col] = df[col].replace({"None": None, "nan": None})
     return df
 
 
-def load_to_db(df: pd.DataFrame, table_name: str, if_exists='replace'):
-    df_clean = clean_text_for_mysql(df)
-
-    # Force UTF-8mb4 connection
-    with engine.connect() as conn:
-        conn.execute(text("SET NAMES utf8mb4"))
-        conn.execute(text("SET CHARACTER SET utf8mb4"))
-
-    df_clean.to_sql(
-        name=table_name,
-        con=engine,
-        if_exists=if_exists,
-        index=False,
-        chunksize=300,  # smaller chunks
-        method=None  # disable multi for safety
-    )
-
-    print(f"✅ Successfully loaded {len(df_clean)} rows into → {table_name}")
-
-
-# Optional: Drop table before loading to avoid column conflicts
-def drop_and_load(df: pd.DataFrame, table_name: str):
+def drop_and_load(df: pd.DataFrame, table_name: str, engine=None):
+    engine = engine or dw_engine
+    df_clean = _clean_text_cols(df)
     with engine.connect() as conn:
         conn.execute(text(f"DROP TABLE IF EXISTS {table_name}"))
-    load_to_db(df, table_name, if_exists='replace')
+        conn.commit()
+    df_clean.to_sql(
+        name=table_name, con=engine, if_exists="replace",
+        index=False, chunksize=300, method=None,
+    )
+    print(f"  loaded {len(df_clean):>5} rows -> {Config.DB_NAME_DW}.{table_name}")
+
+
+def load_dimensions(dim_frames: dict):
+    print("Loading dimensions:")
+    for name, frame in dim_frames.items():
+        drop_and_load(frame, name)
+
+
+def load_facts(ppp_clean, pgd_clean, etude_clean):
+    print("Loading facts:")
+    drop_and_load(ppp_clean,   Config.TABLE_PPP_CLEAN)
+    drop_and_load(pgd_clean,   Config.TABLE_PGD_CLEAN)
+    drop_and_load(etude_clean, Config.TABLE_PGD_ETUDE_CLEAN)

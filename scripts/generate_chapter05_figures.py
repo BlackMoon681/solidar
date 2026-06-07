@@ -143,48 +143,33 @@ def fig_use_case():
     fig.patch.set_facecolor(C_BG)
 
     # System boundary
-    sb = FancyBboxPatch((2.0, 0.4), 10, 8.1,
+    sb = FancyBboxPatch((4.0, 0.4), 9.2, 8.1,
                         boxstyle="round,pad=0.1",
                         facecolor="#EBF5FB", edgecolor=C_BOX,
                         linewidth=2.0, zorder=1)
     ax.add_patch(sb)
-    ax.text(7.0, 8.3, "Système PPP-Risk — Sprint 5", ha="center", va="center",
+    ax.text(8.6, 8.3, "Système PPP-Risk — Sprint 5", ha="center", va="center",
             fontsize=12, fontweight="bold", color=C_BOX, zorder=5)
 
-    # Actors
-    actor(ax, 0.8, 4.5, "Administrateur")
-    actor(ax, 13.2, 5.5, "Agent métier")
+    # Single actor — only the Administrateur supervises the ML & pipeline
+    actor(ax, 1.6, 4.5, "Administrateur")
 
-    # Use case ellipses (x, y, label)
+    # Use case ellipses (all reserved to the administrator)
     ucs = [
-        (5.5, 7.4, "Déclencher le\npipeline manuellement"),
-        (5.5, 5.9, "Consulter l'état\ndu pipeline"),
-        (5.5, 4.4, "Consulter les versions\ndu modèle ML"),
-        (5.5, 2.9, "Rollback vers version\nprécédente"),
-        (5.5, 1.4, "Exécuter la suite\nde tests"),
-        (9.5, 7.4, "Consulter les\nbenchmarks"),
-        (9.5, 5.9, "Consulter l'état\ndu pipeline"),
-        (9.5, 4.4, "Consulter les\nrapports de sécurité"),
+        (8.6, 7.6, "Déclencher le\npipeline manuellement"),
+        (8.6, 6.4, "Consulter l'état\ndu pipeline"),
+        (8.6, 5.2, "Consulter les versions\ndu modèle ML"),
+        (8.6, 4.0, "Rollback vers une\nversion précédente"),
+        (8.6, 2.8, "Consulter les\nbenchmarks & sécurité"),
+        (8.6, 1.6, "Exécuter la suite\nde tests"),
     ]
     for (cx, cy, txt) in ucs:
-        ell(ax, cx, cy, 3.2, 0.9, txt)
+        ell(ax, cx, cy, 3.4, 0.92, txt)
 
-    # Admin connections
-    admin_x, admin_y_base = 1.5, 4.5
-    for cx, cy, _ in ucs[:5]:
-        ax.plot([admin_x, cx - 1.6], [admin_y_base, cy], color="#888", lw=1.1, zorder=2)
-
-    # Agent connections
-    agent_x, agent_y_base = 12.6, 5.5
-    for cx, cy, _ in ucs[5:]:
-        ax.plot([agent_x, cx + 1.6], [agent_y_base, cy], color="#888", lw=1.1, zorder=2)
-
-    # <<include>> between overlapping use cases (same uc shared)
-    ax.annotate("", xy=(8.04, 5.9), xytext=(7.12, 5.9),
-                arrowprops=dict(arrowstyle="-|>", color="#888", lw=1.0,
-                                mutation_scale=10), zorder=2)
-    ax.text(7.6, 6.1, "<<include>>", ha="center", fontsize=7, color="#666",
-            style="italic")
+    # Admin connections — all use cases
+    admin_x, admin_y_base = 2.3, 4.5
+    for cx, cy, _ in ucs:
+        ax.plot([admin_x, cx - 1.7], [admin_y_base, cy], color="#888", lw=1.1, zorder=2)
 
     # Legend
     leg = [
@@ -193,6 +178,10 @@ def fig_use_case():
     ]
     ax.legend(handles=leg, loc="lower left", fontsize=8, framealpha=0.8,
               bbox_to_anchor=(0.0, 0.0))
+
+    ax.text(8.6, 0.0,
+            "La supervision du pipeline et du modèle ML est réservée à l'administrateur.",
+            ha="center", fontsize=8.5, style="italic", color="#555")
 
     save(fig, UC_DIR / "uc_sprint5.png")
 

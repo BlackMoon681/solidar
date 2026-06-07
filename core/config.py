@@ -9,16 +9,24 @@ class Config:
     DB_PORT = int(os.getenv("DB_PORT"))
     DB_USER = os.getenv("DB_USER")
     DB_PASSWORD = os.getenv("DB_PASSWORD")
-    DB_NAME = os.getenv("DB_NAME")
+    DB_NAME = os.getenv("DB_NAME")                       # source app DB (jwdb)
+    DB_NAME_DW = os.getenv("DB_NAME_DW", "cleaned_dw")   # analytical warehouse
 
-    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    # Source DB (Joget — raw tables live here)
+    SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
 
-    # Raw source tables
+    # Data warehouse (cleaned facts + dimensions)
+    SQLALCHEMY_DW_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME_DW}?charset=utf8mb4"
+
+    # Server-level URI (no database selected — used to CREATE the warehouse)
+    SQLALCHEMY_SERVER_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/?charset=utf8mb4"
+
+    # Raw source tables (jwdb)
     TABLE_PPP       = "app_fd_base_ppp"
     TABLE_PGD       = "app_fd_base_pgd"
     TABLE_PGD_ETUDE = "app_fd_base_pgd_etude"
 
-    # Clean output tables
-    TABLE_PPP_CLEAN       = "app_fd_ppp_clean"
-    TABLE_PGD_CLEAN       = "app_fd_pgd_clean"
-    TABLE_PGD_ETUDE_CLEAN = "app_fd_pgd_etude_clean"
+    # Clean fact tables (cleaned_dw)
+    TABLE_PPP_CLEAN       = "fact_ppp"
+    TABLE_PGD_CLEAN       = "fact_pgd"
+    TABLE_PGD_ETUDE_CLEAN = "fact_pgd_etude"

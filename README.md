@@ -15,20 +15,24 @@ app/                   FastAPI application
   dependencies.py      ML model + FAISS index loaded at startup
   routes/
     predict.py         POST /predict  — risk scoring
-    chat.py            POST /chat     — RAG chatbot
+    chat.py            POST /chat     — RAG chatbot (multi-turn, history-aware)
     pipeline.py        GET/POST /pipeline/* and /model/*
 
-core/config.py         Centralised DB config
+core/config.py         Centralised DB + data-warehouse config
 
 etl/                   ETL pipeline (extract → transform → load)
-  extract.py / transform.py / load.py / main.py
+  extract.py           Pull raw rows from Joget (jwdb)
+  transform.py         Clean facts, resolve FK labels, currency → TND
+  load.py              Write dimensions + facts to cleaned_dw warehouse
+  main.py              Pipeline orchestrator for ETL stages
+  dimensions.py        Dimension-table specs and build logic (galaxy schema)
 
 ml/                    Machine learning
   train.py             XGBoost training (synthetic or real DB data)
   versioning.py        Model version registry + AUC gate + rollback
   report.py            Version comparison report + AUC trend plot
 
-chatbot/
+Chatbot/
   data_prep.py         Build documents.jsonl from DB
   build_index.py       Build FAISS index from documents
   data/                documents.jsonl + documents_with_meta.json
@@ -37,20 +41,39 @@ chatbot/
 pipeline.py            Nightly orchestrator (ETL + chatbot + ML + figures)
 
 tests/
-  test_functional.py   9 behavioural tests on ML + FAISS + pipeline
-  test_performance.py  5 benchmarks (inference, FAISS, feature eng)
-  test_security.py     7 security checks (CORS, secrets, SQL injection)
+  test_functional.py   Behavioural tests on ML + FAISS + pipeline
+  test_performance.py  Benchmarks (inference, FAISS, feature eng)
+  test_security.py     Security checks (CORS, secrets, SQL injection)
   test_db_optimization.py  MySQL index audit + query timing
   run_all.py           Full test suite runner
 
 scripts/
-  analystes.py         Thesis statistics (chapter 4)
-  generate_chapter05_figures.py  Generate all 7 chapter 5 figures
+  analystes.py                    Thesis statistics (chapter 4)
+  generate_chapter05_figures.py   Chapter 5 figures
+  generate_activity_etl.py        ETL activity diagram (galaxy-schema pipeline)
+  generate_archi.py               5-layer platform architecture diagram
+  generate_dw_schema.py           cleaned_dw galaxy-schema ERD
 ```
 
 ---
 
-## Key metrics
+## Data Warehouse — Galaxy Schema
+
+The ETL now targets a dedicated MySQL warehouse (`cleaned_dw`) structured as a galaxy schema with **3 fact tables** and **shared dimension tables**:
+
+| Table | Description |
+|---|---|
+| `fact_ppp` | PPP project risk indicators + resolved label columns |
+| `fact_pgd` | PGD project budgets (normalised to TND) |
+| `fact_pgd_etude` | PGD study costs (normalised to TND) |
+| `dim_axe`, `dim_sous_axe`, … | ~15 dimension tables (UUID-keyed, from Joget param tables) |
+| `dim_gouvernorat`, `dim_delegation` | Geographic dimensions (integer-coded) |
+
+The warehouse is created automatically on first run (`etl/load.py:ensure_warehouse`).
+
+---
+
+## Key Metrics
 
 | Component | Value |
 |---|---|
@@ -61,7 +84,7 @@ scripts/
 | Full prediction pipeline (offline) | **13.8 ms** avg |
 | FAISS search (829 vectors × 384 dim) | **0.056 ms** avg |
 | Documents indexed (RAG) | **829** (PPP + PGD + Etude) |
-| Features | **34** (4 structural + 3 engineered + 6 composite + 21 binary flags) |
+| Features | **13** structural + binary risk signals |
 
 ---
 
@@ -74,6 +97,7 @@ scripts/
 | RAG | FAISS + SentenceTransformers (all-MiniLM-L6-v2) |
 | LLM | llama-3.3-70b-versatile via Groq API |
 | DB | MySQL (via SQLAlchemy + PyMySQL) |
+| Data Warehouse | MySQL `cleaned_dw` — galaxy schema |
 | Scheduler | APScheduler (daily at midnight, Africa/Tunis) |
 | Dashboard | Apache Superset + Chart.js |
 | Platform | Joget DX |
@@ -95,6 +119,7 @@ DB_PORT=3306
 DB_USER=your_user
 DB_PASSWORD=your_password
 DB_NAME=jwdb
+DB_NAME_DW=cleaned_dw
 GROQ_API_KEY=your_groq_key
 ```
 
@@ -125,8 +150,13 @@ python tests/run_all.py --skip-db
 python tests/run_all.py              # requires DB connection
 
 # Build chatbot index
-python chatbot/data_prep.py          # generate documents from DB
-python chatbot/build_index.py        # build FAISS index
+python Chatbot/data_prep.py          # generate documents from DB
+python Chatbot/build_index.py        # build FAISS index
+
+# Generate diagrams
+python scripts/generate_activity_etl.py   # ETL activity diagram
+python scripts/generate_archi.py          # architecture diagram
+python scripts/generate_dw_schema.py      # data warehouse ERD
 ```
 
 ---
@@ -136,7 +166,7 @@ python chatbot/build_index.py        # build FAISS index
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/predict` | Risk score (0–1) + level + LLM explanation |
-| `POST` | `/chat` | RAG question answering with sources |
+| `POST` | `/chat` | RAG question answering with multi-turn history |
 | `GET` | `/pipeline/status` | DB counts, last run, model AUC, log tail |
 | `POST` | `/pipeline/run` | Trigger pipeline (`?force=true&stages=etl,chatbot`) |
 | `GET` | `/model/versions` | Full ML version registry |

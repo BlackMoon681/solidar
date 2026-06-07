@@ -18,7 +18,7 @@ import joblib
 from sqlalchemy import create_engine
 from core.config import Config
 
-engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
+engine = create_engine(Config.SQLALCHEMY_DW_URI)   # cleaned facts in cleaned_dw
 
 _root      = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 V3_PATH    = os.path.join(_root, "ml", "data", "ppp_noise_augmented_v3.csv")
@@ -51,7 +51,7 @@ def dist(df, target):
 # ── 1. DB distributions ──────────────────────────────────────────────────────
 print(f"\n{'DB (app_fd_ppp_clean) — ORIGINAL'}")
 print(SEP)
-df_db  = pd.read_sql("SELECT * FROM app_fd_ppp_clean", engine)
+df_db  = pd.read_sql(f"SELECT * FROM {Config.TABLE_PPP_CLEAN}", engine)
 db_dist = {}
 for t in TARGETS:
     d = dist(df_db, t)

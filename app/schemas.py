@@ -40,5 +40,11 @@ class ProjectInput(BaseModel):
     escalation:    int = 0
 
 
+class ChatTurn(BaseModel):
+    role: str          # "user" or "bot"
+    content: str
+
+
 class Question(BaseModel):
     question: str
+    history: list[ChatTurn] = []

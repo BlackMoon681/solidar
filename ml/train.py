@@ -108,9 +108,9 @@ def load_real_data() -> tuple[pd.DataFrame, pd.Series]:
     from core.config import Config
     from sqlalchemy import create_engine, text
 
-    engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
-    df = pd.read_sql("SELECT * FROM app_fd_ppp_clean", engine)
-    print(f"  Loaded {len(df)} rows from app_fd_ppp_clean")
+    engine = create_engine(Config.SQLALCHEMY_DW_URI)
+    df = pd.read_sql(f"SELECT * FROM {Config.TABLE_PPP_CLEAN}", engine)
+    print(f"  Loaded {len(df)} rows from {Config.DB_NAME_DW}.{Config.TABLE_PPP_CLEAN}")
 
     # ------------------------------------------------------------------ #
     # Column mapping: DB column → model feature name                      #

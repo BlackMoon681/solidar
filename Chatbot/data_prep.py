@@ -18,7 +18,7 @@ _dir = os.path.dirname(os.path.abspath(__file__))
 OUT  = os.path.join(_dir, "data", "documents.jsonl")
 os.makedirs(os.path.join(_dir, "data"), exist_ok=True)
 
-engine = create_engine(Config.SQLALCHEMY_DATABASE_URI)
+engine = create_engine(Config.SQLALCHEMY_DW_URI)   # clean facts live in cleaned_dw
 
 ppp       = pd.read_sql(f"SELECT * FROM {Config.TABLE_PPP_CLEAN}",      engine)
 pgd       = pd.read_sql(f"SELECT * FROM {Config.TABLE_PGD_CLEAN}",      engine)
@@ -26,7 +26,15 @@ pgd_etude = pd.read_sql(f"SELECT * FROM {Config.TABLE_PGD_ETUDE_CLEAN}", engine)
 
 
 def s(x):
-    return "" if pd.isna(x) else str(x).strip()
+    if pd.isna(x) if not isinstance(x, str) else False:
+        return ""
+    v = str(x).strip()
+    # MySQL returns latin-1 bytes decoded as latin-1; re-decode as cp1252
+    try:
+        v = v.encode("latin-1").decode("cp1252")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        pass
+    return v
 
 
 documents = []
@@ -34,8 +42,10 @@ documents = []
 for _, row in ppp.iterrows():
     text = (
         f"Projet PPP: {s(row.get('c_nom_projet'))}\n\n"
-        f"Localisation: {s(row.get('c_gouvernorat'))}, {s(row.get('c_commune'))}\n"
-        f"Statut: {s(row.get('c_situation_actuelle_projet'))}\n"
+        f"Gouvernorat: {s(row.get('gouvernorat_label'))}\n"
+        f"Délégation: {s(row.get('delegation_label'))}\n"
+        f"Secteur: {s(row.get('secteur_label'))}\n"
+        f"Statut: {s(row.get('situation_label'))}\n"
         f"Phase actuelle: {s(row.get('c_phase_en_cours'))}\n\n"
         f"Budget prévu: {s(row.get('c_budget_global_planifie'))} TND\n"
         f"Budget consommé: {s(row.get('c_budget_global_consomme'))} TND\n"
@@ -43,8 +53,10 @@ for _, row in ppp.iterrows():
         f"Avancement: {s(row.get('c_taux_avancement_institutionnel'))}\n"
         f"Bénéficiaires: {s(row.get('c_nombre_beneficiaires'))}\n"
         f"ODD: {s(row.get('c_odd'))}\n"
-        f"Acteur: {s(row.get('c_acteur_dimplementation'))}\n"
-        f"Bailleur: {s(row.get('c_bailleur_fonds'))}"
+        f"Acteur: {s(row.get('acteur_implementation_label'))}\n"
+        f"Bailleur: {s(row.get('c_bailleur_fonds'))}\n"
+        f"Axe: {s(row.get('axe_label'))}\n"
+        f"Classification: {s(row.get('classification_label'))}"
     )
     documents.append({
         "source": "PPP",
@@ -52,8 +64,8 @@ for _, row in ppp.iterrows():
         "metadata": {
             "id":      s(row.get("id")),
             "project": s(row.get("c_nom_projet")),
-            "region":  s(row.get("c_gouvernorat")),
-            "status":  s(row.get("c_situation_actuelle_projet")),
+            "region":  s(row.get("gouvernorat_label")),
+            "status":  s(row.get("situation_label")),
         }
     })
 

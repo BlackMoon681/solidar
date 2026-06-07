@@ -92,21 +92,23 @@ def _save_state(state: dict):
 # ---------------------------------------------------------------------------
 # DB helpers
 # ---------------------------------------------------------------------------
-def _get_engine():
+def _get_engine(dw: bool = False):
+    """dw=False -> source jwdb (raw tables); dw=True -> cleaned_dw (facts/dims)."""
     from core.config import Config
     from sqlalchemy import create_engine
-    return create_engine(Config.SQLALCHEMY_DATABASE_URI)
+    uri = Config.SQLALCHEMY_DW_URI if dw else Config.SQLALCHEMY_DATABASE_URI
+    return create_engine(uri)
 
-def _db_row_count(table: str) -> int:
+def _db_row_count(table: str, dw: bool = False) -> int:
     import sqlalchemy as sa
-    engine = _get_engine()
+    engine = _get_engine(dw)
     with engine.connect() as conn:
         result = conn.execute(sa.text(f"SELECT COUNT(*) FROM {table}"))
         return result.scalar()
 
-def _db_positive_count(table: str, col: str = "risque_depassement") -> int:
+def _db_positive_count(table: str, col: str = "risque_depassement", dw: bool = True) -> int:
     import sqlalchemy as sa
-    engine = _get_engine()
+    engine = _get_engine(dw)
     with engine.connect() as conn:
         result = conn.execute(
             sa.text(f"SELECT COUNT(*) FROM {table} WHERE {col} = 1")
@@ -211,14 +213,15 @@ def stage_model(state: dict, force: bool = False) -> dict:
     result = {"ran": False, "skipped_reason": "", "error": None}
 
     try:
-        clean_count = _db_row_count("app_fd_ppp_clean")
-        pos_count   = _db_positive_count("app_fd_ppp_clean")
+        from core.config import Config
+        clean_count = _db_row_count(Config.TABLE_PPP_CLEAN, dw=True)
+        pos_count   = _db_positive_count(Config.TABLE_PPP_CLEAN, dw=True)
     except Exception as e:
         result["skipped_reason"] = f"DB unreachable: {e}"
         log.warning(f"  Model check skipped — {e}")
         return result
 
-    log.info(f"  app_fd_ppp_clean: {clean_count} rows, {pos_count} positives")
+    log.info(f"  {Config.TABLE_PPP_CLEAN} (cleaned_dw): {clean_count} rows, {pos_count} positives")
 
     if not force:
         if clean_count < MIN_REAL_ROWS:
@@ -386,9 +389,10 @@ def run_pipeline(stages: list = None, force: bool = False) -> dict:
 def get_status() -> dict:
     state = _load_state()
     try:
+        from core.config import Config
         raw_counts  = {t: _db_row_count(t) for t in RAW_TABLES}
-        clean_count = _db_row_count("app_fd_ppp_clean")
-        pos_count   = _db_positive_count("app_fd_ppp_clean")
+        clean_count = _db_row_count(Config.TABLE_PPP_CLEAN, dw=True)
+        pos_count   = _db_positive_count(Config.TABLE_PPP_CLEAN, dw=True)
         db_ok = True
     except Exception as e:
         raw_counts  = {}
